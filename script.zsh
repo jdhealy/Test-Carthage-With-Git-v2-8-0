@@ -16,8 +16,21 @@ curl https://raw.githubusercontent.com/Homebrew/homebrew-core/a128b97c6e57e62ca7
 brew install ${here}/git.rb # install from bottle
 
 brew uninstall --force `# uninstall multiple versions` carthage
-# download Formula for Carthage tag `v0.15.2`
-curl https://raw.githubusercontent.com/Homebrew/homebrew-core/34f5ceb96bc2c1e13ab04911bfb5927d902b6054/Formula/carthage.rb >! ${here}/carthage.rb
+# Modify Formula to have `brew` replace `script/bootstrap`.
+local carthage_formula="$(curl https://raw.githubusercontent.com/Homebrew/homebrew-core/34f5ceb96bc2c1e13ab04911bfb5927d902b6054/Formula/carthage.rb)"
+{
+	for line in ${(f)carthage_formula}; do
+		[[ ${line} =~ 'prefix_install' ]] &&
+		cat <<-EOF
+			File.open('script/bootstrap', 'w') do |out|
+				out << ("#!/bin/bash\n" + "git submodule update --init --recursive")
+			end
+		EOF
+
+		print -r ${line}
+	done
+} | tee ${here}/carthage.rb
+
 brew install --verbose --build-from-source --HEAD ${here}/carthage.rb
 
 # - - -
